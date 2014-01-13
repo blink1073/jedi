@@ -113,9 +113,10 @@ class Instance(use_metaclass(CachedMetaClass, Executable)):
                 if n.names[0] == self_name and len(n.names) == 2:
                     add_self_dot_name(n)
 
-        for s in self.base.get_super_classes():
-            for inst in self._evaluator.execute(s):
-                names += inst.get_self_attributes()
+        if not isinstance(self.base, compiled.PyObject):
+            for s in self.base.get_super_classes():
+                for inst in self._evaluator.execute(s):
+                    names += inst.get_self_attributes()
         return names
 
     def get_subscope_by_name(self, name):
@@ -197,10 +198,10 @@ class InstanceElement(use_metaclass(CachedMetaClass, pr.Base)):
     def parent(self):
         par = self.var.parent
         if isinstance(par, Class) and par == self.instance.base \
-            or isinstance(par, pr.Class) \
+                or isinstance(par, pr.Class) \
                 and par == self.instance.base.base:
             par = self.instance
-        elif not isinstance(par, pr.Module):
+        elif not isinstance(par, (pr.Module, compiled.PyObject)):
             par = InstanceElement(self.instance._evaluator, self.instance, par, self.is_class_var)
         return par
 

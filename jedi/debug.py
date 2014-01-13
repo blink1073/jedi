@@ -1,11 +1,16 @@
 from jedi._compatibility import u, encoding, is_py3k
 import inspect
+import os
 import time
 
 try:
-    # Use colorama for nicer console output.
-    from colorama import Fore, init
-    init()
+    if os.name == 'nt':
+        # does not work on Windows, as pyreadline and colorama interfere
+        raise ImportError
+    else:
+        # Use colorama for nicer console output.
+        from colorama import Fore, init
+        init()
 except ImportError:
     class Fore(object):
         RED = ''
@@ -24,11 +29,24 @@ enable_notice = False
 # callback, interface: level, str
 debug_function = None
 ignored_modules = ['jedi.evaluate.builtin', 'jedi.parser']
+debug_indent = -1
 
 
 def reset_time():
-    global start_time
+    global start_time, debug_indent
     start_time = time.time()
+    debug_indent = -1
+
+
+def increase_indent(func):
+    """Decorator for makin """
+    def wrapper(*args, **kwargs):
+        global debug_indent
+        debug_indent += 1
+        result = func(*args, **kwargs)
+        debug_indent -= 1
+        return result
+    return wrapper
 
 
 def dbg(*args):
@@ -37,18 +55,21 @@ def dbg(*args):
         frm = inspect.stack()[1]
         mod = inspect.getmodule(frm[0])
         if not (mod.__name__ in ignored_modules):
-            debug_function(NOTICE, 'dbg: ' + ', '.join(u(a) for a in args))
+            i = ' ' * debug_indent
+            debug_function(NOTICE, i + 'dbg: ' + ', '.join(u(a) for a in args))
 
 
 def warning(*args):
     if debug_function and enable_warning:
-        debug_function(WARNING, 'warning: ' + ', '.join(u(a) for a in args))
+        i = ' ' * debug_indent
+        debug_function(WARNING, i + 'warning: ' + ', '.join(u(a) for a in args))
 
 
 def speed(name):
     if debug_function and enable_speed:
         now = time.time()
-        debug_function(SPEED, 'speed: ' + '%s %s' % (name, now - start_time))
+        i = ' ' * debug_indent
+        debug_function(SPEED, i + 'speed: ' + '%s %s' % (name, now - start_time))
 
 
 def print_to_stdout(level, str_out):

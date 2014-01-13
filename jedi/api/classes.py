@@ -138,8 +138,10 @@ class BaseDefinition(object):
         """
         # generate the type
         stripped = self._definition
-        if isinstance(self._definition, er.InstanceElement):
-            stripped = self._definition.var
+        if isinstance(stripped, compiled.PyObject):
+            return stripped.type()
+        if isinstance(stripped, er.InstanceElement):
+            stripped = stripped.var
         if isinstance(stripped, pr.Name):
             stripped = stripped.parent
         return type(stripped).__name__.lower()
@@ -171,11 +173,11 @@ class BaseDefinition(object):
         The module name.
 
         >>> from jedi import Script
-        >>> source = 'import datetime'
-        >>> script = Script(source, 1, len(source), 'example.py')
+        >>> source = 'import json'
+        >>> script = Script(source, path='example.py')
         >>> d = script.goto_definitions()[0]
         >>> print(d.module_name)                       # doctest: +ELLIPSIS
-        datetime
+        json
         """
         return str(self._module.name)
 
@@ -235,7 +237,7 @@ class BaseDefinition(object):
 
         """
         try:
-            return self._definition.doc
+            return self._definition.doc or ''  # Always a String, never None.
         except AttributeError:
             return self.raw_doc
 
@@ -438,7 +440,9 @@ class Definition(BaseDefinition):
         if isinstance(d, er.InstanceElement):
             d = d.var
 
-        if isinstance(d, pr.Name):
+        if isinstance(d, compiled.PyObject):
+            return d.name
+        elif isinstance(d, pr.Name):
             return d.names[-1] if d.names else None
         elif isinstance(d, iterable.Array):
             return unicode(d.type)
@@ -457,7 +461,6 @@ class Definition(BaseDefinition):
                 return d.assignment_details[0][1].values[0][0].name.names[-1]
             except IndexError:
                 return None
-        return None
 
     @property
     def description(self):
